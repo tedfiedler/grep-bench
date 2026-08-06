@@ -1,0 +1,132 @@
+{
+  "name": "alpine-busybox",
+  "grep_version": "grep (BusyBox v1.37.0)",
+  "grep_path": "/bin/busybox",
+  "machine": "aarch64",
+  "python": "3.12.13",
+  "files": 5,
+  "total_bytes": 5028456018,
+  "started": "2026-08-05T23:55:19Z",
+  "runs": [
+    {
+      "uuid": "214c5d0c-a2f9-4eac-89e2-ef943194fef4",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 38.2714,
+      "decrypt_s": 0.005,
+      "lines": 677
+    },
+    {
+      "uuid": "461220b0-7bcf-4a4b-876b-23087eafc79a",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 37.3168,
+      "decrypt_s": 0.0023,
+      "lines": 886
+    },
+    {
+      "uuid": "e4f4adb5-1a85-4e46-b33c-60df93b89f93",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 36.4955,
+      "decrypt_s": 0.0015,
+      "lines": 581
+    },
+    {
+      "uuid": "1692fa08-5ea9-4207-aa99-c2e3cc56f37f",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 36.3009,
+      "decrypt_s": 0.0016,
+      "lines": 629
+    },
+    {
+      "uuid": "34d3d78e-a094-43b0-b18f-06549dde2623",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 36.1357,
+      "decrypt_s": 0.0022,
+      "lines": 887
+    },
+    {
+      "uuid": "214c5d0c-a2f9-4eac-89e2-ef943194fef4",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 36.3544,
+      "decrypt_s": 0.0018,
+      "lines": 677
+    },
+    {
+      "uuid": "461220b0-7bcf-4a4b-876b-23087eafc79a",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 36.2882,
+      "decrypt_s": 0.0022,
+      "lines": 886
+    },
+    {
+      "uuid": "e4f4adb5-1a85-4e46-b33c-60df93b89f93",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 36.3841,
+      "decrypt_s": 0.0022,
+      "lines": 581
+    },
+    {
+      "uuid": "1692fa08-5ea9-4207-aa99-c2e3cc56f37f",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 36.7607,
+      "decrypt_s": 0.0016,
+      "lines": 629
+    },
+    {
+      "uuid": "34d3d78e-a094-43b0-b18f-06549dde2623",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 36.6957,
+      "decrypt_s": 0.0023,
+      "lines": 887
+    },
+    {
+      "uuid": "214c5d0c-a2f9-4eac-89e2-ef943194fef4",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 36.205,
+      "decrypt_s": 0.0017,
+      "lines": 677
+    },
+    {
+      "uuid": "461220b0-7bcf-4a4b-876b-23087eafc79a",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 36.4554,
+      "decrypt_s": 0.0034,
+      "lines": 886
+    },
+    {
+      "uuid": "e4f4adb5-1a85-4e46-b33c-60df93b89f93",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 36.1365,
+      "decrypt_s": 0.0015,
+      "lines": 581
+    },
+    {
+      "uuid": "1692fa08-5ea9-4207-aa99-c2e3cc56f37f",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 36.1246,
+      "decrypt_s": 0.0017,
+      "lines": 629
+    },
+    {
+      "uuid": "34d3d78e-a094-43b0-b18f-06549dde2623",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 36.3485,
+      "decrypt_s": 0.0023,
+      "lines": 887
+    }
+  ]
+}

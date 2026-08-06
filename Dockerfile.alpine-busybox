@@ -1,0 +1,5 @@
+FROM python:3.12-alpine
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+RUN pip install --no-cache-dir cryptography
+WORKDIR /app
+COPY generate_logs.py search.py bench.py build_index.py bench_strategies.py /app/

@@ -1,0 +1,7 @@
+FROM python:3.12-alpine
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+# GNU grep from apk shadows the busybox grep applet; ripgrep for the
+# strategy comparison
+RUN apk add --no-cache grep ripgrep && pip install --no-cache-dir cryptography
+WORKDIR /app
+COPY generate_logs.py search.py bench.py build_index.py bench_strategies.py /app/

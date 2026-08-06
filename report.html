@@ -1,0 +1,532 @@
+<title>grep container benchmark</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --baseline: #c3c2b7; --ring: rgba(11,11,11,.10);
+    --c-busybox: #2a78d6; --c-debian: #eb6834; --c-gnugrep: #1baf7a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --baseline: #383835; --ring: rgba(255,255,255,.10);
+      --c-busybox: #3987e5; --c-debian: #d95926; --c-gnugrep: #199e70;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --baseline: #383835; --ring: rgba(255,255,255,.10);
+    --c-busybox: #3987e5; --c-debian: #d95926; --c-gnugrep: #199e70;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --baseline: #c3c2b7; --ring: rgba(11,11,11,.10);
+    --c-busybox: #2a78d6; --c-debian: #eb6834; --c-gnugrep: #1baf7a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 48px 24px 72px; display: flex; flex-direction: column; gap: 40px; }
+
+  header .eyebrow {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  }
+  header h1 {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    font-size: clamp(24px, 4vw, 34px); font-weight: 600; margin: 8px 0 10px;
+    letter-spacing: -.01em; text-wrap: balance;
+  }
+  header .meta { color: var(--ink-2); font-size: 14px; max-width: 65ch; }
+  header .meta .sep { color: var(--baseline); padding: 0 6px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 6px;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .tile .label { font-size: 13px; color: var(--ink-2); }
+  .tile .value {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    font-size: 30px; font-weight: 600; line-height: 1.2;
+  }
+  .tile .sub { font-size: 12.5px; color: var(--muted); }
+
+  section h2 {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    font-size: 19px; font-weight: 600; margin: 0 0 4px; letter-spacing: -.01em; text-wrap: balance;
+  }
+  section > p.lede { color: var(--ink-2); font-size: 14.5px; margin: 0 0 16px; max-width: 68ch; }
+  section p { max-width: 68ch; }
+
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 6px; padding: 20px 20px 14px; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart .cat-label { font-size: 12.5px; fill: var(--ink-2); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .chart .val-label { font-size: 12.5px; font-weight: 600; fill: var(--ink);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .chart .tick-label { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .chart .note-label { font-size: 12px; fill: var(--muted); font-family: system-ui, sans-serif; }
+  .chart [tabindex]:focus-visible { outline: 2px solid var(--c-busybox); outline-offset: 2px; }
+
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; vertical-align: baseline; }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); padding: 0 0 12px 2px; }
+
+  #tooltip {
+    position: fixed; z-index: 10; pointer-events: none; visibility: hidden;
+    background: var(--surface); color: var(--ink); border: 1px solid var(--ring);
+    border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    padding: 8px 11px; font-size: 12.5px; line-height: 1.5; max-width: 260px;
+  }
+  #tooltip .t-name { font-weight: 600; }
+  #tooltip .t-row { color: var(--ink-2); white-space: nowrap; }
+  #tooltip .t-row b { color: var(--ink); font-weight: 600;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+  th, td { text-align: left; padding: 7px 14px 7px 0; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+
+  ul.findings { padding-left: 0; margin: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  ul.findings li { max-width: 72ch; padding-left: 18px; position: relative; }
+  ul.findings li::before { content: ""; position: absolute; left: 0; top: .58em; width: 8px; height: 8px; border-radius: 2px; background: var(--baseline); }
+  ul.findings li b { font-weight: 600; }
+
+  code, pre {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
+  code { background: var(--surface); border: 1px solid var(--ring); border-radius: 4px; padding: 1px 5px; }
+  pre { background: var(--surface); border: 1px solid var(--ring); border-radius: 6px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.55; margin: 12px 0; }
+  pre code { background: none; border: none; padding: 0; }
+
+  details { border: 1px solid var(--ring); border-radius: 6px; background: var(--surface); }
+  details summary { cursor: pointer; padding: 12px 16px; font-size: 14px; font-weight: 600; }
+  details .table-scroll { padding: 0 16px 12px; }
+
+  footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--grid); padding-top: 18px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Benchmark report · 2026-08-05</div>
+    <h1>grep in a subprocess: BusyBox vs GNU across three containers</h1>
+    <div class="meta">
+      Python app → <span class="mono">subprocess</span> → <span class="mono">grep&nbsp;-F&nbsp;-h&nbsp;&lt;uuid&gt;</span> over encrypted JSON logs, then AES-256-GCM decrypt of every match.
+      <br>5 files<span class="sep">·</span>5.03&nbsp;GB<span class="sep">·</span>12.5M lines<span class="sep">·</span>5 UUIDs × 2 warm reps + 1 cold pass<span class="sep">·</span>Docker Desktop VM, aarch64, 8 vCPU / 8&nbsp;GB
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="label">BusyBox vs GNU grep</div>
+      <div class="value">50×</div>
+      <div class="sub">slower per query, identical command</div>
+    </div>
+    <div class="tile">
+      <div class="label">Fastest warm query</div>
+      <div class="value">0.73&thinsp;s</div>
+      <div class="sub">debian-hardened · GNU grep 3.8</div>
+    </div>
+    <div class="tile">
+      <div class="label">Peak scan throughput</div>
+      <div class="value">6.9&thinsp;GB/s</div>
+      <div class="sub">warm page cache</div>
+    </div>
+    <div class="tile">
+      <div class="label">Decrypt cost per query</div>
+      <div class="value">~2&thinsp;ms</div>
+      <div class="sub">≈732 lines, AES-256-GCM</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Warm grep time per query</h2>
+    <p class="lede">Mean wall-clock time for one UUID lookup across all 5&nbsp;GB, page cache warm. Same binary invocation everywhere — only the grep implementation behind it differs.</p>
+    <div class="card chart" id="chart-warm"></div>
+  </section>
+
+  <section>
+    <h2>The GNU pair, zoomed: glibc vs musl</h2>
+    <p class="lede">Every warm run for the two GNU-grep containers on a 0–1&nbsp;s axis; the heavy tick marks each container's mean. Alpine ships the <em>newer</em> grep (3.12 vs 3.8) yet trails by ~20% — glibc's SIMD-tuned string routines beat musl's on bulk scanning.</p>
+    <div class="card chart" id="chart-zoom"></div>
+  </section>
+
+  <section>
+    <h2>Cold-cache penalty</h2>
+    <p class="lede">First query after dropping the VM page cache, as a multiple of the container's warm mean. The GNU containers are I/O-bound when cold (~3&nbsp;s to pull 5&nbsp;GB off disk) and CPU-light once cached. BusyBox barely notices the cache — the CPU is the bottleneck either way.</p>
+    <div class="card chart" id="chart-cold"></div>
+  </section>
+
+  <section>
+    <h2>Is grep even the fastest way?</h2>
+    <p class="lede">Same lookup, five strategies, both GNU-grep containers (warm cache, find phase only — decryption adds ~2&nbsp;ms to any of them; every strategy returned identical match counts). Pure Python holds its own, parallelism is the big lever, and an index makes scanning look silly.</p>
+    <div class="card chart">
+      <div class="legend" id="strat-legend"></div>
+      <div id="chart-strategies"></div>
+    </div>
+    <p style="font-size:14.5px; color:var(--ink-2); margin-top:16px">
+      The pure-Python scanner (<span class="mono">mmap</span> + <span class="mono">bytes.find</span>, CPython's C-level two-way search) matches GNU grep with no subprocess and no packages — and it runs at the same speed on musl as glibc, so it turns a stock Alpine image's ~36&nbsp;s BusyBox query into ~0.69&nbsp;s with nothing installed. Splitting the five files across five worker processes cuts that to ~0.16&nbsp;s. Ripgrep's spread is packaging, not musl: Debian bookworm ships rg&nbsp;13.0.0, Alpine ships rg&nbsp;15.1.0 with newer SIMD paths.
+      The index (one row per UUID in SQLite mapping to packed file/byte-offset pairs, then seek + readline per match) took a one-time 5.6&nbsp;s scan to build, weighs 126&nbsp;MB, and answers in ~1&nbsp;ms — and unlike every scanning strategy it stays ~1&nbsp;ms as the dataset grows.
+    </p>
+  </section>
+
+  <section>
+    <h2>Findings</h2>
+    <ul class="findings">
+      <li><b>Stock Alpine is a performance trap for this workload.</b> BusyBox grep is a minimal naive matcher — no Boyer–Moore skipping, no vectorized <span class="mono">memchr</span>, small read chunks. At ~36&nbsp;s per lookup, the Python app spends its life waiting on the subprocess.</li>
+      <li><b>The fix is one line: <code>apk add grep</code>.</b> GNU grep shadows the BusyBox applet and recovers ~97% of the gap with zero change to the Python code — the same <span class="mono">subprocess</span> argv simply resolves to a different binary.</li>
+      <li><b>The remaining ~20% is libc, not grep version.</b> Debian's older GNU grep 3.8 on glibc (0.73&nbsp;s) outruns Alpine's newer 3.12 on musl (0.87&nbsp;s). If lookup latency matters most, a glibc base wins; the hardening applied here (non-root, no setuid, dropped capabilities, read-only rootfs) cost nothing measurable.</li>
+      <li><b>grep isn't the ceiling.</b> A pure-Python <span class="mono">mmap</span> scan parallelized across files runs the same lookup in 0.16&nbsp;s (~4–5× faster than GNU grep, libc-independent), and a one-time UUID→offset index answers in ~1&nbsp;ms. If lookups are a real access pattern rather than ad-hoc forensics, index — every scanning strategy pays O(dataset) per query.</li>
+      <li><b>Encryption is a rounding error.</b> AES-256-GCM decryption of ~732 matched lines takes 1.6–2.7&nbsp;ms — under 0.3% of even the fastest query. The design question for this pipeline is entirely "which grep", not "what does crypto cost".</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Aggregate results</h2>
+    <div class="card table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Container</th><th>grep</th>
+            <th class="num">Cold first</th><th class="num">Warm mean</th><th class="num">Warm min–max</th>
+            <th class="num">Throughput</th><th class="num">Decrypt</th><th class="num">Lines/query</th><th class="num">vs fastest</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="swatch" style="background:var(--c-debian)"></span>debian-hardened</td>
+            <td>GNU grep 3.8 · glibc</td>
+            <td class="num">2.91 s</td><td class="num">0.73 ± 0.02 s</td><td class="num">0.71–0.75 s</td>
+            <td class="num">6.90 GB/s</td><td class="num">1.6 ms</td><td class="num">732</td><td class="num">—</td>
+          </tr>
+          <tr>
+            <td><span class="swatch" style="background:var(--c-gnugrep)"></span>alpine-gnugrep</td>
+            <td>GNU grep 3.12 · musl</td>
+            <td class="num">2.61 s</td><td class="num">0.87 ± 0.01 s</td><td class="num">0.85–0.89 s</td>
+            <td class="num">5.79 GB/s</td><td class="num">2.0 ms</td><td class="num">732</td><td class="num">1.2×</td>
+          </tr>
+          <tr>
+            <td><span class="swatch" style="background:var(--c-busybox)"></span>alpine-busybox</td>
+            <td>BusyBox 1.37.0</td>
+            <td class="num">38.27 s</td><td class="num">36.38 ± 0.22 s</td><td class="num">36.13–36.76 s</td>
+            <td class="num">0.14 GB/s</td><td class="num">2.1 ms</td><td class="num">732</td><td class="num">49.9×</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Methodology</h2>
+    <p class="lede">The application under test times its two phases separately:</p>
+    <pre><code>subprocess.run(["grep", "-F", "-h", uuid, *files])   # phase 1: find
+AESGCM(key).decrypt(nonce, ciphertext, None)         # phase 2: per matched line</code></pre>
+    <div class="card table-scroll">
+      <table>
+        <thead><tr><th>Container</th><th>Base image</th><th>grep binary</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><span class="swatch" style="background:var(--c-busybox)"></span>alpine-busybox</td><td>python:3.12-alpine</td><td>/bin/busybox</td><td>stock image, BusyBox applet</td></tr>
+          <tr><td><span class="swatch" style="background:var(--c-debian)"></span>debian-hardened</td><td>python:3.12-slim-bookworm</td><td>/usr/bin/grep</td><td>non-root user, setuid/setgid bits stripped</td></tr>
+          <tr><td><span class="swatch" style="background:var(--c-gnugrep)"></span>alpine-gnugrep</td><td>python:3.12-alpine</td><td>/bin/grep</td><td>stock image + <code>apk add grep</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:14.5px; color:var(--ink-2); margin-top:16px">
+      Dataset: 5 × 1.01&nbsp;GB JSONL files (12.5M lines) in a named Docker volume, so I/O stays inside the Linux VM rather than crossing the macOS bind-mount boundary. Each line carries an <span class="mono">id</span> UUID shared by 500–1000 lines (interleaved with ~250 other active UUIDs) and a <span class="mono">msg</span> of base64(nonce&nbsp;‖&nbsp;AES-256-GCM ciphertext). UUIDs contain dashes, which cannot occur in base64, so a fixed-string match can only hit the <span class="mono">id</span> field.
+      All three containers ran with identical flags (<span class="mono">--cap-drop ALL --security-opt no-new-privileges --read-only</span>) and searched the same seeded set of 5 UUIDs: one cold pass immediately after dropping the VM page cache, then two measured warm repetitions.
+      <br><br><b>Reproducibility:</b> this page shows the second full pipeline run. The first run (fresh dataset, separate cache drops) agreed within a few hundredths of a second on every GNU-grep and Python number; BusyBox was ~4% slower there (38.1&nbsp;s warm mean, i.e. 52× vs this run's 50×).
+      <br><br><b>Caveat:</b> absolute numbers come from Docker's aarch64 VM on a Mac (8 vCPU / 8&nbsp;GB); treat the <em>relative</em> rankings as the durable result.
+    </p>
+  </section>
+
+  <section>
+    <h2>All 45 runs</h2>
+    <details>
+      <summary>Per-run timings (5 UUIDs × 3 reps × 3 containers)</summary>
+      <div class="table-scroll" id="runs-table"></div>
+    </details>
+  </section>
+
+  <footer>
+    Generated 2026-08-05 by the grep-bench harness (<span class="mono">~/claude/grep-bench</span>) · raw data in <span class="mono">results/*.json</span>
+  </footer>
+</div>
+
+<div id="tooltip" role="status"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var CONTAINERS = {
+    "alpine-busybox":  { color: "var(--c-busybox)", grep: "BusyBox 1.37.0" },
+    "alpine-gnugrep":  { color: "var(--c-gnugrep)", grep: "GNU grep 3.12 · musl" },
+    "debian-hardened": { color: "var(--c-debian)",  grep: "GNU grep 3.8 · glibc" }
+  };
+
+  var WARM = {
+    "alpine-busybox":  [36.354, 36.288, 36.384, 36.761, 36.696, 36.205, 36.455, 36.136, 36.125, 36.349],
+    "alpine-gnugrep":  [0.857, 0.878, 0.865, 0.861, 0.888, 0.853, 0.882, 0.855, 0.863, 0.886],
+    "debian-hardened": [0.718, 0.748, 0.723, 0.709, 0.751, 0.710, 0.740, 0.721, 0.730, 0.738]
+  };
+  var STATS = {
+    "alpine-busybox":  { mean: 36.38, sd: 0.22, cold: 38.27, tput: 0.14 },
+    "alpine-gnugrep":  { mean: 0.87,  sd: 0.01, cold: 2.61,  tput: 5.79 },
+    "debian-hardened": { mean: 0.73,  sd: 0.02, cold: 2.91,  tput: 6.90 }
+  };
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function el(name, attrs, parent) {
+    var n = document.createElementNS(SVGNS, name);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+
+  var tooltip = document.getElementById("tooltip");
+  function showTip(html, x, y) {
+    tooltip.innerHTML = html;
+    tooltip.style.visibility = "visible";
+    var r = tooltip.getBoundingClientRect();
+    var left = Math.min(x + 14, window.innerWidth - r.width - 8);
+    var top = y - r.height - 12;
+    if (top < 8) top = y + 18;
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
+  }
+  function hideTip() { tooltip.style.visibility = "hidden"; }
+  function bindTip(node, html) {
+    node.addEventListener("mousemove", function (e) { showTip(html, e.clientX, e.clientY); });
+    node.addEventListener("mouseleave", hideTip);
+    node.addEventListener("focus", function () {
+      var r = node.getBoundingClientRect();
+      showTip(html, r.left + r.width / 2, r.top);
+    });
+    node.addEventListener("blur", hideTip);
+  }
+  function tipHtml(name, rows) {
+    var h = '<div class="t-name"><span class="swatch" style="background:' + CONTAINERS[name].color + '"></span>' + name + "</div>";
+    for (var i = 0; i < rows.length; i++) h += '<div class="t-row">' + rows[i][0] + " <b>" + rows[i][1] + "</b></div>";
+    return h;
+  }
+
+  // Rounded data-end (right), square baseline (left). Degrades to a plain
+  // rect when the bar is narrower than the 4px radius.
+  function barPath(x, y, w, h, parent) {
+    var r = Math.min(4, w);
+    var d = "M" + x + "," + y +
+            " h" + (w - r) + " a" + r + "," + r + " 0 0 1 " + r + "," + r +
+            " v" + (h - 2 * r) + " a" + r + "," + r + " 0 0 1 " + (-r) + "," + r +
+            " h" + (-(w - r)) + " Z";
+    return el("path", { d: d }, parent);
+  }
+
+  var W = 760, PAD_L = 8, PAD_R = 64;
+  var plotW = W - PAD_L - PAD_R;
+
+  function axis(svg, ticks, max, y0, y1, fmt) {
+    for (var i = 0; i < ticks.length; i++) {
+      var x = PAD_L + (ticks[i] / max) * plotW;
+      el("line", { x1: x, y1: y0, x2: x, y2: y1, stroke: ticks[i] === 0 ? "var(--baseline)" : "var(--grid)", "stroke-width": 1 }, svg);
+      var t = el("text", { x: x, y: y1 + 16, "text-anchor": "middle", "class": "tick-label" }, svg);
+      t.textContent = fmt(ticks[i]);
+    }
+  }
+
+  // ---- Chart 1: warm mean bars, 0-40 s ----
+  (function () {
+    var order = ["alpine-busybox", "alpine-gnugrep", "debian-hardened"];
+    var max = 40, rowH = 52, topPad = 6;
+    var H = topPad + order.length * rowH + 26;
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+      "aria-label": "Bar chart of warm mean grep time per query: alpine-busybox 36.38 seconds, alpine-gnugrep 0.87 seconds, debian-hardened 0.73 seconds." });
+    axis(svg, [0, 10, 20, 30, 40], max, topPad, topPad + order.length * rowH, function (v) { return v + " s"; });
+
+    order.forEach(function (name, i) {
+      var s = STATS[name];
+      var y = topPad + i * rowH;
+      var lbl = el("text", { x: PAD_L, y: y + 14, "class": "cat-label" }, svg);
+      lbl.textContent = name + "  ·  " + CONTAINERS[name].grep;
+      var barY = y + 22, barH = 20;
+      var w = Math.max(2, (s.mean / max) * plotW);
+      barPath(PAD_L, barY, w, barH, svg).setAttribute("fill", CONTAINERS[name].color);
+      var v = el("text", { x: PAD_L + w + 8, y: barY + 14.5, "class": "val-label" }, svg);
+      v.textContent = s.mean.toFixed(2) + " s";
+      if (name === "alpine-busybox") {
+        var note = el("text", { x: PAD_L + w - 8, y: barY - 8, "text-anchor": "end", "class": "note-label" }, svg);
+        note.textContent = "50× the fastest container";
+      }
+      var hit = el("rect", { x: 0, y: y, width: W, height: rowH, fill: "transparent", tabindex: 0, role: "img",
+        "aria-label": name + ": warm mean " + s.mean.toFixed(2) + " seconds" }, svg);
+      bindTip(hit, tipHtml(name, [
+        ["warm mean", s.mean.toFixed(2) + " s ± " + s.sd.toFixed(2)],
+        ["cold first query", s.cold.toFixed(2) + " s"],
+        ["throughput", s.tput.toFixed(2) + " GB/s"]
+      ]));
+    });
+    document.getElementById("chart-warm").appendChild(svg);
+  })();
+
+  // ---- Chart 2: dot strip for the GNU pair, 0-1 s ----
+  (function () {
+    var order = ["debian-hardened", "alpine-gnugrep"];
+    var max = 1.0, rowH = 56, topPad = 6;
+    var H = topPad + order.length * rowH + 26;
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+      "aria-label": "Dot plot of every warm run for the two GNU grep containers: debian-hardened runs cluster between 0.71 and 0.75 seconds, alpine-gnugrep between 0.85 and 0.89 seconds." });
+    axis(svg, [0, 0.25, 0.5, 0.75, 1.0], max, topPad, topPad + order.length * rowH, function (v) { return v.toFixed(2) + " s"; });
+
+    order.forEach(function (name, i) {
+      var s = STATS[name];
+      var y = topPad + i * rowH;
+      var lbl = el("text", { x: PAD_L, y: y + 14, "class": "cat-label" }, svg);
+      lbl.textContent = name + "  ·  " + CONTAINERS[name].grep;
+      var cy = y + 34;
+      var meanX = PAD_L + (s.mean / max) * plotW;
+      el("line", { x1: meanX, y1: cy - 12, x2: meanX, y2: cy + 12, stroke: CONTAINERS[name].color, "stroke-width": 3 }, svg);
+      WARM[name].forEach(function (run, j) {
+        var cx = PAD_L + (run / max) * plotW;
+        el("circle", { cx: cx, cy: cy, r: 6, fill: "var(--surface)" }, svg);
+        var dot = el("circle", { cx: cx, cy: cy, r: 4, fill: CONTAINERS[name].color, tabindex: 0, role: "img",
+          "aria-label": name + " run " + (j + 1) + ": " + run.toFixed(3) + " seconds" }, svg);
+        bindTip(dot, tipHtml(name, [["run " + (j + 1), run.toFixed(3) + " s"], ["container mean", s.mean.toFixed(2) + " s"]]));
+      });
+      var v = el("text", { x: meanX, y: y + 62, "text-anchor": "middle", "class": "val-label" }, svg);
+      v.textContent = "mean " + s.mean.toFixed(2) + " s";
+    });
+    document.getElementById("chart-zoom").appendChild(svg);
+  })();
+
+  // ---- Chart 3: cold-cache penalty ratio, 0-5x ----
+  (function () {
+    var order = ["debian-hardened", "alpine-gnugrep", "alpine-busybox"];
+    var max = 5, rowH = 52, topPad = 6;
+    var H = topPad + order.length * rowH + 26;
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+      "aria-label": "Bar chart of cold-cache penalty: debian-hardened first query is 4.0 times its warm mean, alpine-gnugrep 3.0 times, alpine-busybox 1.05 times." });
+    axis(svg, [0, 1, 2, 3, 4, 5], max, topPad, topPad + order.length * rowH, function (v) { return v + "×"; });
+
+    order.forEach(function (name, i) {
+      var s = STATS[name];
+      var ratio = s.cold / s.mean;
+      var y = topPad + i * rowH;
+      var lbl = el("text", { x: PAD_L, y: y + 14, "class": "cat-label" }, svg);
+      lbl.textContent = name;
+      var barY = y + 22, barH = 20;
+      var w = (ratio / max) * plotW;
+      barPath(PAD_L, barY, w, barH, svg).setAttribute("fill", CONTAINERS[name].color);
+      var v = el("text", { x: PAD_L + w + 8, y: barY + 14.5, "class": "val-label" }, svg);
+      v.textContent = ratio.toFixed(2) + "×";
+      var hit = el("rect", { x: 0, y: y, width: W, height: rowH, fill: "transparent", tabindex: 0, role: "img",
+        "aria-label": name + ": cold first query " + s.cold.toFixed(2) + " seconds, " + ratio.toFixed(2) + " times its warm mean" }, svg);
+      bindTip(hit, tipHtml(name, [
+        ["cold first query", s.cold.toFixed(2) + " s"],
+        ["warm mean", s.mean.toFixed(2) + " s"],
+        ["penalty", ratio.toFixed(2) + "×"]
+      ]));
+    });
+    document.getElementById("chart-cold").appendChild(svg);
+  })();
+
+  // ---- Chart 4: strategy comparison, grouped bars, 0-1 s ----
+  (function () {
+    var SERIES = [
+      { key: "d", name: "debian-hardened", sub: "glibc", color: "var(--c-debian)" },
+      { key: "a", name: "alpine-gnugrep", sub: "musl", color: "var(--c-gnugrep)" }
+    ];
+    var STRATS = [
+      { label: "grep subprocess (baseline)", d: [0.730, 0.706, 0.795], a: [0.870, 0.850, 0.889] },
+      { label: "ripgrep subprocess · rg 13.0.0 / 15.1.0", d: [0.424, 0.409, 0.466], a: [0.106, 0.094, 0.168] },
+      { label: "Python mmap + bytes.find, sequential", d: [0.711, 0.645, 0.843], a: [0.690, 0.643, 0.732] },
+      { label: "Python mmap, one worker per file", d: [0.156, 0.147, 0.164], a: [0.155, 0.144, 0.162] },
+      { label: "UUID→offset index (SQLite) + seek", d: [0.001, 0.001, 0.002], a: [0.001, 0.001, 0.004] }
+    ];
+    var legend = document.getElementById("strat-legend");
+    SERIES.forEach(function (s) {
+      var span = document.createElement("span");
+      span.innerHTML = '<span class="swatch" style="background:' + s.color + '"></span>' + s.name + " (" + s.sub + ")";
+      legend.appendChild(span);
+    });
+
+    function fmt(v) { return v < 0.01 ? "~1 ms" : v.toFixed(2) + " s"; }
+    var max = 1.0, rowH = 62, topPad = 6, barH = 14;
+    var H = topPad + STRATS.length * rowH + 26;
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+      "aria-label": "Grouped bar chart of five search strategies. Warm mean per query: grep 0.73 and 0.87 seconds on Debian and Alpine; ripgrep 0.42 and 0.11 seconds; sequential Python mmap 0.71 and 0.69 seconds; parallel Python mmap 0.16 seconds on both; SQLite offset index about 1 millisecond on both." });
+    axis(svg, [0, 0.25, 0.5, 0.75, 1.0], max, topPad, topPad + STRATS.length * rowH, function (v) { return v.toFixed(2) + " s"; });
+
+    STRATS.forEach(function (st, i) {
+      var y = topPad + i * rowH;
+      var lbl = el("text", { x: PAD_L, y: y + 14, "class": "cat-label" }, svg);
+      lbl.textContent = st.label;
+      SERIES.forEach(function (s, j) {
+        var vals = st[s.key];
+        var barY = y + 21 + j * (barH + 2);
+        var w = Math.max(2, (vals[0] / max) * plotW);
+        barPath(PAD_L, barY, w, barH, svg).setAttribute("fill", s.color);
+        var v = el("text", { x: PAD_L + w + 8, y: barY + 11.5, "class": "val-label" }, svg);
+        v.textContent = fmt(vals[0]);
+        var hit = el("rect", { x: 0, y: barY - 1, width: W, height: barH + 2, fill: "transparent", tabindex: 0, role: "img",
+          "aria-label": st.label + ", " + s.name + ": mean " + fmt(vals[0]) }, svg);
+        bindTip(hit, tipHtml(s.name, [
+          ["strategy", st.label.split(" · ")[0]],
+          ["mean", fmt(vals[0])],
+          ["min–max", fmt(vals[1]) + " – " + fmt(vals[2])]
+        ]));
+      });
+    });
+    document.getElementById("chart-strategies").appendChild(svg);
+  })();
+
+  // ---- Per-run table (chart data's accessible twin) ----
+  (function () {
+    var RUNS = {
+      "alpine-busybox": {
+        cold: [[38.271, 677], [37.317, 886], [36.495, 581], [36.301, 629], [36.136, 887]],
+        warm: [[36.354, 677], [36.288, 886], [36.384, 581], [36.761, 629], [36.696, 887],
+               [36.205, 677], [36.455, 886], [36.136, 581], [36.125, 629], [36.349, 887]]
+      },
+      "debian-hardened": {
+        cold: [[2.912, 677], [1.212, 886], [0.740, 581], [0.714, 629], [0.738, 887]],
+        warm: [[0.718, 677], [0.748, 886], [0.723, 581], [0.709, 629], [0.751, 887],
+               [0.710, 677], [0.740, 886], [0.721, 581], [0.730, 629], [0.738, 887]]
+      },
+      "alpine-gnugrep": {
+        cold: [[2.614, 677], [1.361, 886], [0.892, 581], [0.862, 629], [0.891, 887]],
+        warm: [[0.857, 677], [0.878, 886], [0.865, 581], [0.861, 629], [0.888, 887],
+               [0.853, 677], [0.882, 886], [0.855, 581], [0.863, 629], [0.886, 887]]
+      }
+    };
+    var UUIDS = ["214c5d0c…", "461220b0…", "e4f4adb5…", "1692fa08…", "34d3d78e…"];
+    var html = '<table><thead><tr><th>Container</th><th>UUID</th><th>Rep</th><th>Cache</th><th class="num">grep (s)</th><th class="num">Lines</th></tr></thead><tbody>';
+    Object.keys(RUNS).forEach(function (name) {
+      var all = RUNS[name].cold.concat(RUNS[name].warm);
+      all.forEach(function (r, i) {
+        var rep = Math.floor(i / 5);
+        html += "<tr><td>" + name + '</td><td class="mono">' + UUIDS[i % 5] + "</td><td>" + rep +
+          "</td><td>" + (rep === 0 ? "cold pass" : "warm") + '</td><td class="num">' + r[0].toFixed(3) +
+          '</td><td class="num">' + r[1] + "</td></tr>";
+      });
+    });
+    html += "</tbody></table>";
+    document.getElementById("runs-table").innerHTML = html;
+  })();
+})();
+</script>

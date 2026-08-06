@@ -1,0 +1,132 @@
+{
+  "name": "alpine-gnugrep",
+  "grep_version": "grep (GNU grep) 3.12",
+  "grep_path": "/bin/grep",
+  "machine": "aarch64",
+  "python": "3.12.13",
+  "files": 5,
+  "total_bytes": 5028456018,
+  "started": "2026-08-06T00:04:43Z",
+  "runs": [
+    {
+      "uuid": "214c5d0c-a2f9-4eac-89e2-ef943194fef4",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 2.6136,
+      "decrypt_s": 0.0033,
+      "lines": 677
+    },
+    {
+      "uuid": "461220b0-7bcf-4a4b-876b-23087eafc79a",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 1.3607,
+      "decrypt_s": 0.0025,
+      "lines": 886
+    },
+    {
+      "uuid": "e4f4adb5-1a85-4e46-b33c-60df93b89f93",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 0.8917,
+      "decrypt_s": 0.0014,
+      "lines": 581
+    },
+    {
+      "uuid": "1692fa08-5ea9-4207-aa99-c2e3cc56f37f",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 0.862,
+      "decrypt_s": 0.0015,
+      "lines": 629
+    },
+    {
+      "uuid": "34d3d78e-a094-43b0-b18f-06549dde2623",
+      "rep": 0,
+      "cold": true,
+      "grep_s": 0.8913,
+      "decrypt_s": 0.0021,
+      "lines": 887
+    },
+    {
+      "uuid": "214c5d0c-a2f9-4eac-89e2-ef943194fef4",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 0.8568,
+      "decrypt_s": 0.0017,
+      "lines": 677
+    },
+    {
+      "uuid": "461220b0-7bcf-4a4b-876b-23087eafc79a",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 0.8784,
+      "decrypt_s": 0.0022,
+      "lines": 886
+    },
+    {
+      "uuid": "e4f4adb5-1a85-4e46-b33c-60df93b89f93",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 0.8654,
+      "decrypt_s": 0.0018,
+      "lines": 581
+    },
+    {
+      "uuid": "1692fa08-5ea9-4207-aa99-c2e3cc56f37f",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 0.8611,
+      "decrypt_s": 0.0016,
+      "lines": 629
+    },
+    {
+      "uuid": "34d3d78e-a094-43b0-b18f-06549dde2623",
+      "rep": 1,
+      "cold": false,
+      "grep_s": 0.8884,
+      "decrypt_s": 0.0023,
+      "lines": 887
+    },
+    {
+      "uuid": "214c5d0c-a2f9-4eac-89e2-ef943194fef4",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 0.8534,
+      "decrypt_s": 0.0017,
+      "lines": 677
+    },
+    {
+      "uuid": "461220b0-7bcf-4a4b-876b-23087eafc79a",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 0.8819,
+      "decrypt_s": 0.0032,
+      "lines": 886
+    },
+    {
+      "uuid": "e4f4adb5-1a85-4e46-b33c-60df93b89f93",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 0.8551,
+      "decrypt_s": 0.0014,
+      "lines": 581
+    },
+    {
+      "uuid": "1692fa08-5ea9-4207-aa99-c2e3cc56f37f",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 0.863,
+      "decrypt_s": 0.0015,
+      "lines": 629
+    },
+    {
+      "uuid": "34d3d78e-a094-43b0-b18f-06549dde2623",
+      "rep": 2,
+      "cold": false,
+      "grep_s": 0.8858,
+      "decrypt_s": 0.0022,
+      "lines": 887
+    }
+  ]
+}
