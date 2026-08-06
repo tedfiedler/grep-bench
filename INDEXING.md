@@ -236,7 +236,13 @@ of one polling cycle (the polling mechanism itself is swappable —
 inotify/FSEvents work too); the real implementation adds the full
 reconciliation: rename, truncation, and deletion handling, keyed by inode
 rather than path (so it drops the `UNIQUE(path)` constraint shown above —
-the inode is the identity, the path is just its current location):
+the inode is the identity, the path is just its current location). It also
+exposes observability: every cycle produces a metrics dict (cycle duration,
+lines indexed, per-file unindexed byte lag) available as
+`indexer.last_metrics`, delivered to an optional `on_cycle` callback for
+wiring into statsd/Prometheus (a failing sink never interrupts indexing),
+and printable as JSON lines via `--metrics` on the CLI. `lag_bytes_total`
+is the number to alert on — a healthy indexer returns it to 0 every cycle:
 
 ```python
 def index_cycle(con, log_dir):

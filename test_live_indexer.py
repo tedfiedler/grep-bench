@@ -163,6 +163,55 @@ class LiveIndexerTest(unittest.TestCase):
         self.assertEqual(len(lookup(self.con, uid(1))), 2)
         self.assertEqual(self.idx_count(), 2)
 
+    # -- metrics -------------------------------------------------------------
+
+    def test_metrics_and_hook(self):
+        seen = []
+        self.indexer.close()
+        self.indexer = LiveIndexer(self.db, self.dir, on_cycle=seen.append)
+        self.addCleanup(self.indexer.close)
+        self.con = self.indexer.con
+
+        p = self.path("app.jsonl")
+        append(p, make_line(uid(1), 0) + make_line(uid(1), 1))
+        self.indexer.cycle()
+        self.indexer.cycle()  # quiet cycle
+
+        self.assertEqual(len(seen), 2)
+        first, second = seen
+        self.assertEqual(first["cycle"], 1)
+        self.assertEqual(first["lines_indexed"], 2)
+        self.assertEqual(first["lines_total"], 2)
+        self.assertEqual(first["files"], 1)
+        self.assertEqual(first["lag_bytes_total"], 0)  # fully caught up
+        self.assertGreaterEqual(first["duration_s"], 0)
+        self.assertEqual(second["lines_indexed"], 0)
+        self.assertEqual(second["lines_total"], 2)
+        self.assertIs(self.indexer.last_metrics, second)
+
+    def test_metrics_lag_counts_torn_bytes(self):
+        p = self.path("app.jsonl")
+        torn = make_line(uid(2), 1)[:-10]  # incomplete: no trailing newline
+        append(p, make_line(uid(1), 0) + torn)
+        self.indexer.cycle()
+        m = self.indexer.last_metrics
+        self.assertEqual(m["lines_indexed"], 1)
+        self.assertEqual(m["lag_bytes"], {p: len(torn)})
+        self.assertEqual(m["lag_bytes_total"], len(torn))
+
+    def test_failing_hook_does_not_stop_indexing(self):
+        def bad_hook(_m):
+            raise ValueError("metrics sink down")
+
+        self.indexer.close()
+        self.indexer = LiveIndexer(self.db, self.dir, on_cycle=bad_hook)
+        self.addCleanup(self.indexer.close)
+        self.con = self.indexer.con
+        append(self.path("app.jsonl"), make_line(uid(1), 0))
+        self.assertEqual(self.indexer.cycle(), 1)  # no exception escapes
+        self.assertEqual(len(lookup(self.con, uid(1))), 1)
+        self.assertEqual(self.indexer.last_metrics["lines_indexed"], 1)
+
     # -- concurrency ---------------------------------------------------------
 
     def test_single_indexer_lock(self):

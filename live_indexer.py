@@ -29,8 +29,10 @@ Design points (details in INDEXING.md):
 import argparse
 import fcntl
 import glob
+import json
 import os
 import sqlite3
+import sys
 import time
 
 UUID_LEN = 36
@@ -79,9 +81,16 @@ def extract_uuid(line):
 
 
 class LiveIndexer:
-    def __init__(self, db_path, log_dir, pattern="*.jsonl"):
+    def __init__(self, db_path, log_dir, pattern="*.jsonl", on_cycle=None):
+        """on_cycle: optional callback invoked after every cycle with the
+        metrics dict (see cycle()). Exceptions it raises are reported to
+        stderr but never interrupt indexing."""
         self.log_dir = log_dir
         self.pattern = pattern
+        self.on_cycle = on_cycle
+        self.last_metrics = None
+        self._cycles = 0
+        self._lines_total = 0
         self._lock_file = open(db_path + ".lock", "w")
         try:
             fcntl.flock(self._lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -103,7 +112,21 @@ class LiveIndexer:
     # -- one polling cycle ---------------------------------------------------
 
     def cycle(self):
-        """Reconcile the file set, then tail every file. Returns lines indexed."""
+        """Reconcile the file set, then tail every file. Returns lines indexed.
+
+        Also updates self.last_metrics and fires the on_cycle hook with:
+          ts              wall-clock time the cycle finished (epoch seconds)
+          cycle           1-based cycle counter for this process
+          duration_s      how long the cycle took
+          lines_indexed   lines added this cycle
+          lines_total     lines added since this process started
+          files           number of tracked files
+          lag_bytes       {path: unindexed bytes} per file (torn tail bytes,
+                          or backlog the cycle didn't reach)
+          lag_bytes_total sum of the above — 0 means fully caught up as of
+                          the sizes observed at cycle start
+        """
+        t0 = time.perf_counter()
         stats = {}
         for path in glob.glob(os.path.join(self.log_dir, self.pattern)):
             try:
@@ -121,6 +144,29 @@ class LiveIndexer:
             if st is None or st.st_size <= watermark:
                 continue
             indexed += self._tail(file_idx, path, watermark)
+
+        lag = {}
+        for path, watermark in self.con.execute("SELECT path, indexed_to FROM files"):
+            st = stats.get(path)
+            if st is not None:
+                lag[path] = max(0, st.st_size - watermark)
+        self._cycles += 1
+        self._lines_total += indexed
+        self.last_metrics = {
+            "ts": round(time.time(), 3),
+            "cycle": self._cycles,
+            "duration_s": round(time.perf_counter() - t0, 4),
+            "lines_indexed": indexed,
+            "lines_total": self._lines_total,
+            "files": len(lag),
+            "lag_bytes": lag,
+            "lag_bytes_total": sum(lag.values()),
+        }
+        if self.on_cycle is not None:
+            try:
+                self.on_cycle(self.last_metrics)
+            except Exception as e:  # a metrics sink must never stop indexing
+                print(f"[indexer] on_cycle hook failed: {e!r}", file=sys.stderr)
         return indexed
 
     def _reconcile(self, stats):
@@ -240,13 +286,17 @@ def main():
     ap.add_argument("--pattern", default="*.jsonl")
     ap.add_argument("--interval", type=float, default=2.0,
                     help="seconds between cycles (0 = run one cycle and exit)")
+    ap.add_argument("--metrics", action="store_true",
+                    help="emit one JSON metrics line per cycle on stdout")
     args = ap.parse_args()
     db = args.db or os.path.join(args.data_dir, "live-index.db")
 
     with LiveIndexer(db, args.data_dir, args.pattern) as indexer:
         while True:
             n = indexer.cycle()
-            if n:
+            if args.metrics:
+                print(json.dumps(indexer.last_metrics), flush=True)
+            elif n:
                 print(f"[indexer] +{n} lines", flush=True)
             if args.interval <= 0:
                 break
