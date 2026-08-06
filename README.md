@@ -49,6 +49,9 @@ Decrypting the ~732 matched messages (AES-256-GCM) costs ~2 ms — noise.
   binary needed
 - `bench.py` / `bench_strategies.py` — per-container and per-strategy timing
 - `build_index.py` — one-pass UUID → (file, byte-offset) SQLite index
+- `live_indexer.py` — incremental version of that index for live, multi-app
+  logs (watermark tailing, rotation handling, WAL, single-writer lock);
+  tested by `test_live_indexer.py` (`python3 -m unittest test_live_indexer`)
 - `Dockerfile.*` — the three container variants
 - `run_bench.sh` — end-to-end: build, generate (once, into a named volume),
   benchmark with page-cache drops, report

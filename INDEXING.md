@@ -229,8 +229,14 @@ renumber anything.
 
 ### 2.2 The indexer loop
 
-Reference implementation of one polling cycle (the shape matters more than
-the polling mechanism — inotify/FSEvents work too):
+This design is implemented in [`live_indexer.py`](live_indexer.py) and tested
+in [`test_live_indexer.py`](test_live_indexer.py) (stdlib-only:
+`python3 -m unittest test_live_indexer`). The snippet below shows the shape
+of one polling cycle (the polling mechanism itself is swappable —
+inotify/FSEvents work too); the real implementation adds the full
+reconciliation: rename, truncation, and deletion handling, keyed by inode
+rather than path (so it drops the `UNIQUE(path)` constraint shown above —
+the inode is the identity, the path is just its current location):
 
 ```python
 def index_cycle(con, log_dir):
@@ -338,4 +344,9 @@ carries over unchanged; only the storage engine swaps.
 *Numbers in this document come from the benchmark runs recorded in
 `results/` and `report.md`; the batch implementation is `build_index.py`, the
 lookup is the `index` strategy in `bench_strategies.py`. The Part 2 indexer
-is a reference design — reviewed but not benchmarked in this repo.*
+is implemented in `live_indexer.py` with a test suite
+(`test_live_indexer.py`) covering incremental tailing, torn writes,
+rename/truncate/delete rotation, crash-restart resume, the single-indexer
+lock, read-only concurrent readers, and a 4-process concurrent-writer
+simulation — verified on macOS and Linux. Its throughput has not been
+benchmarked in this repo.*
