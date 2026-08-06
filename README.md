@@ -33,7 +33,9 @@ But grep isn't the ceiling:
 Pure Python matches GNU grep (CPython's substring search is C-level, and
 libc-independent — it fixes stock Alpine without installing anything),
 parallelism across files buys ~5×, and if lookups recur, a one-time index
-(5.6 s to build, 126 MB) beats every scanning strategy by ~500×.
+(5.6 s to build, 126 MB) beats every scanning strategy by ~500×. The index
+design — including how to run it live against logs written by many
+applications — is documented in detail in [INDEXING.md](INDEXING.md).
 
 Decrypting the ~732 matched messages (AES-256-GCM) costs ~2 ms — noise.
 
